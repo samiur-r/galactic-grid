@@ -1,9 +1,4 @@
 import { createMcpHandler } from 'mcp-handler'
-import { 
-  GetMissionDetailsSchema,
-  GetUpcomingLaunchesSchema,
-  GetISSPositionSchema
-} from '@/types/space'
 import { getEnvConfig } from '@/types/env'
 import { SpaceApiService } from '@/lib/space-apis/space-api-service'
 
@@ -20,8 +15,18 @@ const handler = createMcpHandler(
     server.tool(
       'getMissionDetails',
       'Get detailed information about a specific space mission by ID',
-      GetMissionDetailsSchema,
-      async ({ missionId }) => {
+      {
+        type: 'object',
+        properties: {
+          missionId: {
+            type: 'string',
+            description: 'The unique identifier for the space mission'
+          }
+        },
+        required: ['missionId']
+      },
+      async (params) => {
+        const missionId = params.missionId
         try {
           const mission = await spaceApiService.getMissionDetails(missionId)
           
@@ -60,8 +65,19 @@ const handler = createMcpHandler(
     server.tool(
       'getISSPosition',
       'Get the current real-time position of the International Space Station',
-      GetISSPositionSchema,
-      async ({ include_passes = false }) => {
+      {
+        type: 'object',
+        properties: {
+          include_passes: {
+            type: 'boolean',
+            description: 'Whether to include upcoming ISS passes over specific locations',
+            default: false
+          }
+        },
+        required: []
+      },
+      async (params) => {
+        const include_passes = params.include_passes === true
         try {
           const issData = await spaceApiService.getISSPosition(include_passes)
           
@@ -104,17 +120,30 @@ const handler = createMcpHandler(
     server.tool(
       'getUpcomingLaunches',
       'Get upcoming rocket launches within a specified time period',
-      GetUpcomingLaunchesSchema,
+      {
+        type: 'object',
+        properties: {
+          days: {
+            type: 'number',
+            description: 'Number of days to look ahead for upcoming launches',
+            default: 30,
+            minimum: 1,
+            maximum: 365
+          }
+        },
+        required: []
+      },
       async (params) => {
         try {
-          const launches = await spaceApiService.getUpcomingLaunches(params)
+          const days = params.days && typeof params.days === 'number' ? Math.min(Math.max(params.days, 1), 365) : 30
+          const launches = await spaceApiService.getUpcomingLaunches({ days, limit: 50 })
           
           if (launches.length === 0) {
             return {
               content: [
                 {
                   type: 'text',
-                  text: `🗓️ No upcoming launches found in the next ${params.days || 30} days.`
+                  text: `🗓️ No upcoming launches found in the next ${days} days.`
                 }
               ]
             }
@@ -138,7 +167,7 @@ const handler = createMcpHandler(
             content: [
               {
                 type: 'text',
-                text: `# 🗓️ Upcoming Launches (Next ${params.days || 30} days):\n\n${launchList}`
+                text: `# 🗓️ Upcoming Launches (Next ${days} days):\n\n${launchList}`
               }
             ]
           }
@@ -162,12 +191,20 @@ const handler = createMcpHandler(
      * Current ISS data resource
      */
     server.resource(
-      'space://iss/current',
       'Current International Space Station position and orbital data',
+      'space://iss/current',
       async () => {
         try {
           const issData = await spaceApiService.getISSPosition(true)
-          return JSON.stringify(issData, null, 2)
+          return {
+            contents: [
+              {
+                uri: 'space://iss/current',
+                mimeType: 'application/json',
+                text: JSON.stringify(issData, null, 2)
+              }
+            ]
+          }
         } catch (error) {
           throw new Error(`Failed to fetch ISS data: ${error instanceof Error ? error.message : 'Unknown error'}`)
         }
@@ -178,4 +215,57 @@ const handler = createMcpHandler(
   { basePath: '/api' }
 )
 
-export { handler as GET, handler as POST, handler as DELETE }
+// MCP Discovery endpoint for GET requests
+export async function GET(request: Request) {
+  // Handle MCP discovery and capabilities
+  const url = new URL(request.url)
+  
+  // Server capabilities and info
+  if (url.pathname.endsWith('/mcp')) {
+    return Response.json({
+      jsonrpc: '2.0',
+      result: {
+        protocolVersion: '2024-11-05',
+        capabilities: {
+          tools: {},
+          resources: {},
+          prompts: {},
+          logging: {}
+        },
+        serverInfo: {
+          name: 'galactic-grid-mcp-server',
+          version: '1.0.0',
+          description: 'AI-Powered Space Mission Tracking MCP Server',
+          author: 'Galactic Grid',
+          homepage: 'https://github.com/samiur-r/galactic-grid'
+        },
+        instructions: 'This MCP server provides real-time space mission data, ISS tracking, and rocket launch information. Use the available tools to get live space data and the resources for cached information.'
+      }
+    }, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+      }
+    })
+  }
+
+  // Fallback to handler for other GET requests
+  return handler(request)
+}
+
+// Handle CORS preflight requests
+export async function OPTIONS() {
+  return new Response(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Max-Age': '86400'
+    }
+  })
+}
+
+export { handler as POST, handler as DELETE }
