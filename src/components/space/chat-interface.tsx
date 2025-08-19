@@ -51,9 +51,9 @@ export function ChatInterface() {
         </div>
         <div className="flex items-center space-x-2 text-sm text-gray-400">
           {isConnecting ? (
-            <span className="animate-pulse">Connecting to space data...</span>
+            <span className="animate-pulse">🔌 Connecting to MCP space data...</span>
           ) : (
-            <span className="text-green-400">🛰️ Live data connected</span>
+            <span className="text-green-400">🛰️ MCP space tools ready</span>
           )}
         </div>
       </div>
@@ -114,7 +114,7 @@ export function ChatInterface() {
                 <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"></div>
                 <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
                 <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                <span className="text-gray-400 text-sm ml-2">Fetching space data...</span>
+                <span className="text-gray-400 text-sm ml-2">🛰️ Fetching live space data...</span>
               </div>
             </div>
           </div>

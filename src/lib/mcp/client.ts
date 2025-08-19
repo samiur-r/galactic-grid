@@ -1,16 +1,15 @@
 import { experimental_createMCPClient as createMCPClient } from 'ai'
+import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
 
 export async function createSpaceMCPClient() {
+  const baseUrl = process.env.NODE_ENV === 'production' 
+    ? `https://${process.env.VERCEL_URL || 'galactic-grid.vercel.app'}`
+    : 'http://localhost:3000'
+    
   const mcpClient = await createMCPClient({
-    transport: {
-      type: 'sse',
-      url: process.env.NODE_ENV === 'production' 
-        ? `${process.env.VERCEL_URL || 'https://galactic-grid.vercel.app'}/api/mcp`
-        : 'http://localhost:3000/api/mcp',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    },
+    transport: new StreamableHTTPClientTransport(
+      new URL(`${baseUrl}/api/mcp`)
+    )
   })
 
   return mcpClient
