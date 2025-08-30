@@ -1,22 +1,40 @@
-import { ChatInterface } from '@/components/space/chat-interface'
-import { ISSTracker } from '@/components/space/iss-tracker'
+import { ChatInterface } from "@/components/space/chat-interface";
+import { ISSTracker } from "@/components/space/iss-tracker";
 
 export default function Home() {
   return (
-    <div className="h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 flex flex-col overflow-hidden relative">
-      {/* Animated Earth Background */}
+    <div className="h-screen bg-gradient-to-br from-black via-gray-900 to-blue-900 flex flex-col overflow-hidden relative">
+      {/* Large Earth Space Background */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="earth-orbit">
-          <div className="earth-container">
-            <div className="earth">🌍</div>
+        {/* Deep Space Background */}
+        <div className="absolute inset-0 bg-gradient-radial from-transparent via-blue-950/20 to-black"></div>
+
+        {/* Large Earth */}
+        <div className="earth-large">
+          <div className="earth-sphere">
+            <div className="earth-atmosphere"></div>
+            <div className="earth-surface"></div>
+            <div className="earth-clouds"></div>
           </div>
         </div>
+
+        {/* Space Stars Field */}
+        <div className="stars-field">
+          <div className="star-field star-field-1"></div>
+          <div className="star-field star-field-2"></div>
+          <div className="star-field star-field-3"></div>
+        </div>
+
+        {/* Twinkling Stars */}
         <div className="stars">
           <div className="star star-1">✨</div>
           <div className="star star-2">⭐</div>
           <div className="star star-3">✨</div>
           <div className="star star-4">⭐</div>
           <div className="star star-5">✨</div>
+          <div className="star star-6">✨</div>
+          <div className="star star-7">⭐</div>
+          <div className="star star-8">✨</div>
         </div>
       </div>
       {/* Header */}
@@ -26,11 +44,13 @@ export default function Home() {
             <div className="flex items-center space-x-3">
               <div className="text-3xl">🌌</div>
               <div>
-                <h1 className="text-2xl font-bold text-white">Galactic Grid 🚀</h1>
-                <p className="text-gray-400 text-sm">Real-time Space Mission Tracking Platform</p>
+                <h1 className="text-2xl font-bold text-white">Galactic Grid</h1>
+                <p className="text-gray-400 text-sm">
+                  Real-time Space Mission Tracking Platform
+                </p>
               </div>
             </div>
-            
+
             <div className="flex items-center space-x-4 text-sm text-gray-400">
               <div className="flex items-center space-x-2">
                 <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
@@ -58,10 +78,12 @@ export default function Home() {
           {/* ISS Tracker & Stats */}
           <div className="space-y-4 h-full overflow-y-auto custom-scrollbar">
             <ISSTracker />
-            
+
             {/* Quick Stats */}
             <div className="bg-gray-900/70 backdrop-blur border border-gray-700 rounded-xl p-4">
-              <h3 className="text-lg font-semibold text-white mb-3">🚀 Quick Stats</h3>
+              <h3 className="text-lg font-semibold text-white mb-3">
+                🚀 Quick Stats
+              </h3>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between items-center">
                   <span className="text-gray-400">Active Astronauts</span>
@@ -84,7 +106,9 @@ export default function Home() {
 
             {/* Features */}
             <div className="bg-gray-900/70 backdrop-blur border border-gray-700 rounded-xl p-4">
-              <h3 className="text-lg font-semibold text-white mb-3">✨ Features</h3>
+              <h3 className="text-lg font-semibold text-white mb-3">
+                ✨ Features
+              </h3>
               <div className="space-y-2 text-sm text-gray-300">
                 <div className="flex items-center space-x-2">
                   <span className="text-green-400">✓</span>
@@ -116,17 +140,14 @@ export default function Home() {
       <footer className="flex-shrink-0 border-t border-gray-700 bg-gray-900/50 backdrop-blur">
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between text-xs text-gray-400">
-            <div>
-              Powered by Model Context Protocol (MCP) • Real-time space data
-            </div>
+            <div>AI-powered space mission tracking platform</div>
             <div className="flex items-center space-x-2">
               <span>🌌 Galactic Grid v1.0</span>
               <span>•</span>
-              <span>Built with Next.js & AI SDK</span>
             </div>
           </div>
         </div>
       </footer>
     </div>
-  )
+  );
 }
