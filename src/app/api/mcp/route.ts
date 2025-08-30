@@ -46,11 +46,12 @@ const handler = createMcpHandler(
             ]
           }
         } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error'
           return {
             content: [
               {
                 type: 'text',
-                text: `❌ Error fetching mission details: ${error instanceof Error ? error.message : 'Unknown error'}`
+                text: `❌ Error fetching mission details: ${errorMessage}`
               }
             ],
             isError: true
@@ -101,11 +102,12 @@ const handler = createMcpHandler(
             ]
           }
         } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error'
           return {
             content: [
               {
                 type: 'text',
-                text: `❌ Error fetching ISS position: ${error instanceof Error ? error.message : 'Unknown error'}`
+                text: `❌ Error fetching ISS position: ${errorMessage}`
               }
             ],
             isError: true
@@ -172,11 +174,12 @@ const handler = createMcpHandler(
             ]
           }
         } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error'
           return {
             content: [
               {
                 type: 'text',
-                text: `❌ Error fetching upcoming launches: ${error instanceof Error ? error.message : 'Unknown error'}`
+                text: `❌ Error fetching upcoming launches: ${errorMessage}`
               }
             ],
             isError: true
@@ -191,8 +194,8 @@ const handler = createMcpHandler(
      * Current ISS data resource
      */
     server.resource(
-      'Current International Space Station position and orbital data',
       'space://iss/current',
+      'Current International Space Station position and orbital data',
       async () => {
         try {
           const issData = await spaceApiService.getISSPosition(true)
@@ -206,7 +209,8 @@ const handler = createMcpHandler(
             ]
           }
         } catch (error) {
-          throw new Error(`Failed to fetch ISS data: ${error instanceof Error ? error.message : 'Unknown error'}`)
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+          throw new Error(`Failed to fetch ISS data: ${errorMessage}`)
         }
       }
     )
@@ -225,7 +229,7 @@ export async function GET(request: Request) {
     return Response.json({
       jsonrpc: '2.0',
       result: {
-        protocolVersion: '2024-11-05',
+        protocolVersion: '2025-06-18',
         capabilities: {
           tools: {},
           resources: {},
