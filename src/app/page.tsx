@@ -3,7 +3,7 @@ import { ISSTracker } from "@/components/space/iss-tracker";
 
 export default function Home() {
   return (
-    <div className="h-screen bg-gradient-to-br from-black via-gray-900 to-blue-900 flex flex-col overflow-hidden relative">
+    <div className="min-h-screen lg:h-screen bg-gradient-to-br from-black via-gray-900 to-blue-900 flex flex-col lg:overflow-hidden relative">
       {/* Large Earth Space Background */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         {/* Deep Space Background */}
@@ -44,14 +44,14 @@ export default function Home() {
             <div className="flex items-center space-x-3">
               <div className="text-3xl">🌌</div>
               <div>
-                <h1 className="text-2xl font-bold text-white">Galactic Grid</h1>
-                <p className="text-gray-400 text-sm">
+                <h1 className="text-xl md:text-2xl font-bold text-white">Galactic Grid</h1>
+                <p className="text-gray-400 text-xs md:text-sm">
                   Real-time Space Mission Tracking Platform
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center space-x-4 text-sm text-gray-400">
+            <div className="hidden md:flex items-center space-x-4 text-sm text-gray-400">
               <div className="flex items-center space-x-2">
                 <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
                 <span>MCP Server Active</span>
@@ -61,22 +61,26 @@ export default function Home() {
                 <span>Live Space Data</span>
               </div>
             </div>
+            <div className="md:hidden flex items-center space-x-2 text-xs text-gray-400">
+              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+              <span>🛰️</span>
+            </div>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 container mx-auto px-4 py-4 overflow-hidden">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-full">
+      <main className="flex-1 container mx-auto px-4 py-4 lg:overflow-hidden mb-4 lg:mb-0">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:h-full pb-4 lg:pb-0">
           {/* Chat Interface */}
-          <div className="lg:col-span-2 h-full">
+          <div className="lg:col-span-2 h-[600px] lg:h-full">
             <div className="bg-gray-900/70 backdrop-blur rounded-xl border border-gray-700 h-full">
               <ChatInterface />
             </div>
           </div>
 
           {/* ISS Tracker & Stats */}
-          <div className="space-y-4 h-full overflow-y-auto custom-scrollbar">
+          <div className="space-y-4 lg:h-full lg:overflow-y-auto custom-scrollbar">
             <ISSTracker />
 
             {/* Quick Stats */}
