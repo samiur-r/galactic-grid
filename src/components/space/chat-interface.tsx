@@ -4,14 +4,35 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 
+/** Parts we actually render */
+type TextPart = {
+  type: "text";
+  text: string;
+};
+
+/** Minimal message shape we need for the UI */
+type BaseMessage = {
+  id?: string;
+  role: "user" | "assistant" | "system" | "tool";
+};
+
+/**
+ * We only render text parts (agentic stream produces many part types,
+ * but we ignore non-text types on purpose).
+ * `content` is kept for legacy/simple messages.
+ */
+type ChatMessage =
+  | (BaseMessage & { parts?: ReadonlyArray<TextPart>; content?: string })
+  | (BaseMessage & { parts?: undefined; content?: string });
+
 export function ChatInterface() {
   // Agentic/Data Stream transport to match server's createUIMessageStreamResponse
-  const { messages, sendMessage, status, error } = useChat({
+  const { messages, sendMessage, status, error } = useChat<ChatMessage>({
     transport: new DefaultChatTransport({ api: "/api/chat" }),
   });
 
-  const [input, setInput] = useState("");
-  const [isFocused, setIsFocused] = useState(false);
+  const [input, setInput] = useState<string>("");
+  const [isFocused, setIsFocused] = useState<boolean>(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const isBusy = status === "submitted" || status === "streaming";
 
@@ -19,7 +40,7 @@ export function ChatInterface() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const quickQuestions = useMemo(
+  const quickQuestions = useMemo<string[]>(
     () => [
       "Where is the ISS right now?",
       "What rockets are launching soon?",
@@ -29,7 +50,7 @@ export function ChatInterface() {
     []
   );
 
-  const onSubmit = (e: React.FormEvent) => {
+  const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const trimmed = input.trim();
     if (!trimmed) return;
@@ -39,16 +60,19 @@ export function ChatInterface() {
 
   const sendQuick = (q: string) => sendMessage({ text: q });
 
-  const renderMessageText = (m: any) => {
-    // Only render text parts; ignore step/tool events to keep UI simple
+  const renderMessageText = (m: ChatMessage): string => {
+    // Prefer text parts (agentic / data-stream)
     if (Array.isArray(m.parts) && m.parts.length > 0) {
       const texts = m.parts
-        .filter((p: any) => p?.type === "text" && typeof p.text === "string")
-        .map((p: any) => p.text)
+        .filter(
+          (p): p is TextPart => p?.type === "text" && typeof p.text === "string"
+        )
+        .map((p) => p.text)
         .join("");
       if (texts) return texts;
     }
-    if (typeof (m as any).content === "string") return (m as any).content;
+    // Fallback to legacy content
+    if (typeof m.content === "string") return m.content;
     return "";
   };
 
@@ -94,7 +118,7 @@ export function ChatInterface() {
           if (!text && m.role !== "user") return null; // hide non-text assistant step messages
           return (
             <div
-              key={idx}
+              key={m.id ?? idx}
               className={`flex ${
                 m.role === "user" ? "justify-end" : "justify-start"
               }`}
@@ -115,7 +139,7 @@ export function ChatInterface() {
                   </div>
                 )}
                 <div className="whitespace-pre-wrap">
-                  {m.role === "user" ? (m as any).content ?? text : text}
+                  {m.role === "user" ? m.content ?? text : text}
                 </div>
               </div>
             </div>
