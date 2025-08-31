@@ -3,31 +3,25 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
+import type { UIMessage } from "ai";
 
-/** Parts we actually render */
-type TextPart = {
-  type: "text";
-  text: string;
-};
+/** Type guard for text parts inside UIMessage.parts */
+type TextPart = { type: "text"; text: string };
 
-/** Minimal message shape we need for the UI */
-type BaseMessage = {
-  id?: string;
-  role: "user" | "assistant" | "system" | "tool";
-};
-
-/**
- * We only render text parts (agentic stream produces many part types,
- * but we ignore non-text types on purpose).
- * `content` is kept for legacy/simple messages.
- */
-type ChatMessage =
-  | (BaseMessage & { parts?: ReadonlyArray<TextPart>; content?: string })
-  | (BaseMessage & { parts?: undefined; content?: string });
+function isTextPart(p: unknown): p is TextPart {
+  return (
+    typeof p === "object" &&
+    p !== null &&
+    "type" in p &&
+    (p as { type: unknown }).type === "text" &&
+    "text" in p &&
+    typeof (p as { text: unknown }).text === "string"
+  );
+}
 
 export function ChatInterface() {
   // Agentic/Data Stream transport to match server's createUIMessageStreamResponse
-  const { messages, sendMessage, status, error } = useChat<ChatMessage>({
+  const { messages, sendMessage, status, error } = useChat<UIMessage>({
     transport: new DefaultChatTransport({ api: "/api/chat" }),
   });
 
@@ -60,19 +54,22 @@ export function ChatInterface() {
 
   const sendQuick = (q: string) => sendMessage({ text: q });
 
-  const renderMessageText = (m: ChatMessage): string => {
+  const renderMessageText = (m: UIMessage): string => {
     // Prefer text parts (agentic / data-stream)
     if (Array.isArray(m.parts) && m.parts.length > 0) {
       const texts = m.parts
-        .filter(
-          (p): p is TextPart => p?.type === "text" && typeof p.text === "string"
-        )
+        .filter(isTextPart)
         .map((p) => p.text)
         .join("");
       if (texts) return texts;
     }
-    // Fallback to legacy content
-    if (typeof m.content === "string") return m.content;
+    // Fallback to legacy/simple messages if `content` exists
+    if (
+      "content" in m &&
+      typeof (m as { content?: unknown }).content === "string"
+    ) {
+      return (m as { content: string }).content;
+    }
     return "";
   };
 
@@ -113,12 +110,12 @@ export function ChatInterface() {
           </div>
         )}
 
-        {messages.map((m, idx) => {
+        {messages.map((m) => {
           const text = renderMessageText(m);
-          if (!text && m.role !== "user") return null; // hide non-text assistant step messages
+          if (!text && m.role !== "user") return null; // hide non-text assistant/system step messages
           return (
             <div
-              key={m.id ?? idx}
+              key={m.id}
               className={`flex ${
                 m.role === "user" ? "justify-end" : "justify-start"
               }`}
@@ -139,7 +136,10 @@ export function ChatInterface() {
                   </div>
                 )}
                 <div className="whitespace-pre-wrap">
-                  {m.role === "user" ? m.content ?? text : text}
+                  {"content" in m &&
+                  typeof (m as { content?: unknown }).content === "string"
+                    ? (m as { content: string }).content
+                    : text}
                 </div>
               </div>
             </div>

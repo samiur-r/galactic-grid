@@ -11,8 +11,10 @@ import { getSpaceMCPTools } from "@/lib/mcp/client";
 
 export const maxDuration = 60;
 
+type MCPClient = Awaited<ReturnType<typeof getSpaceMCPTools>>["client"];
+
 export async function POST(req: Request) {
-  let mcpClient: any = null;
+  let mcpClient: MCPClient | null = null;
 
   try {
     const { messages }: { messages: UIMessage[] } = await req.json();

@@ -112,6 +112,28 @@ interface N2YOPositions {
   }>;
 }
 
+/** ---------- Helpers ---------- */
+
+type Agency = Mission["agency"]; // "SpaceX" | "NASA" | ... | "Other"
+
+function normalizeAgency(raw?: string): Agency {
+  if (!raw) return "Other";
+  const n = raw.toLowerCase();
+
+  if (n.includes("spacex") || n.includes("space exploration technologies"))
+    return "SpaceX";
+  if (n.includes("nasa") || n.includes("national aeronautics")) return "NASA";
+  if (n.includes("esa") || n.includes("european space agency")) return "ESA";
+  if (n.includes("isro") || n.includes("indian space research")) return "ISRO";
+  if (n.includes("cnsa") || n.includes("china national space")) return "CNSA";
+  if (n.includes("roscosmos")) return "Roscosmos";
+  if (n.includes("jaxa") || n.includes("japan aerospace")) return "JAXA";
+  if (n.includes("blue origin")) return "Blue Origin";
+  if (n.includes("virgin galactic")) return "Virgin Galactic";
+
+  return "Other";
+}
+
 /** ---------- Service ---------- */
 
 export class SpaceApiService {
@@ -134,7 +156,7 @@ export class SpaceApiService {
       rocket: spacexData.rocket?.name || "Falcon 9",
       payload:
         spacexData.payloads
-          ?.map((p: SpaceXPayload) => p.name)
+          ?.map((p) => p.name)
           .filter((n): n is string => Boolean(n && n.length > 0))
           .join(", ") || "Unknown",
       live_stream_url: spacexData.links?.webcast || undefined,
@@ -146,7 +168,7 @@ export class SpaceApiService {
       id: String(llData.id),
       name: llData.name,
       description: llData.mission?.description || llData.name,
-      agency: llData.launch_service_provider?.name || "Unknown",
+      agency: normalizeAgency(llData.launch_service_provider?.name),
       status: this.mapLaunchLibraryStatus(llData.status?.name ?? "TBD"),
       launch_date: llData.net,
       mission_type: llData.mission?.type || "Unknown",
@@ -188,7 +210,7 @@ export class SpaceApiService {
         (llData.mission?.id != null ? String(llData.mission.id) : undefined) ||
         String(llData.id),
       name: llData.name,
-      agency: llData.launch_service_provider?.name || "Unknown",
+      agency: normalizeAgency(llData.launch_service_provider?.name),
       rocket: llData.rocket?.configuration?.full_name || "Unknown",
       launch_date: llData.net,
       launch_time_utc: llData.net,
@@ -231,6 +253,7 @@ export class SpaceApiService {
       throw new Error("Mission not found in any API");
     } catch (error) {
       // Fallback to demo data if APIs fail
+      // eslint-disable-next-line no-console
       console.warn(
         `Failed to fetch mission ${missionId}, using fallback:`,
         error
@@ -299,13 +322,11 @@ export class SpaceApiService {
 
           // Apply filters
           if (status) {
-            spacexMissions = spacexMissions.filter(
-              (m: Mission) => m.status === status
-            );
+            spacexMissions = spacexMissions.filter((m) => m.status === status);
           }
           if (query) {
             const q = query.toLowerCase();
-            spacexMissions = spacexMissions.filter((m: Mission) => {
+            spacexMissions = spacexMissions.filter((m) => {
               const name = m.name.toLowerCase();
               const desc = m.description?.toLowerCase() ?? "";
               return name.includes(q) || desc.includes(q);
@@ -314,7 +335,7 @@ export class SpaceApiService {
           if (start_date || end_date) {
             const start = start_date ? new Date(start_date) : null;
             const end = end_date ? new Date(end_date) : null;
-            spacexMissions = spacexMissions.filter((m: Mission) => {
+            spacexMissions = spacexMissions.filter((m) => {
               if (!m.launch_date) return false;
               const d = new Date(m.launch_date);
               if (start && d < start) return false;
@@ -337,6 +358,7 @@ export class SpaceApiService {
 
       return uniqueMissions;
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.warn("Failed to search missions, using fallback:", error);
       // Fallback data
       return [
@@ -397,11 +419,11 @@ export class SpaceApiService {
       const data = (await response.json()) as LLList<LLLaunch>;
 
       return (
-        data.results?.map((launch: LLLaunch) =>
-          this.mapLaunchLibraryToLaunch(launch)
-        ) || []
+        data.results?.map((launch) => this.mapLaunchLibraryToLaunch(launch)) ||
+        []
       );
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.warn("Failed to fetch launches, using fallback:", error);
       // Fallback data
       return [
@@ -459,6 +481,7 @@ export class SpaceApiService {
   }): Promise<Satellite[]> {
     try {
       const { satelliteId, category = "active", limit = 10 } = params;
+      void category; // currently unused, keep for future filtering
 
       // If specific satellite requested, try to get its data
       if (satelliteId) {
@@ -507,6 +530,7 @@ export class SpaceApiService {
               }
             }
           } catch (error) {
+            // eslint-disable-next-line no-console
             console.warn("N2YO API error:", error);
           }
         }
@@ -551,6 +575,7 @@ export class SpaceApiService {
 
       return popularSatellites.slice(0, limit);
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.warn("Failed to fetch satellite data, using fallback:", error);
       // Fallback to ISS data
       return [
