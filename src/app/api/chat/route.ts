@@ -1,64 +1,84 @@
 import { openai } from "@ai-sdk/openai";
-import { streamText } from "ai";
+import {
+  streamText,
+  convertToModelMessages,
+  createUIMessageStream,
+  createUIMessageStreamResponse,
+  stepCountIs,
+  type UIMessage,
+} from "ai";
 import { getSpaceMCPTools } from "@/lib/mcp/client";
+
+export const maxDuration = 60;
 
 export async function POST(req: Request) {
   let mcpClient: any = null;
 
   try {
-    const { messages } = await req.json();
+    const { messages }: { messages: UIMessage[] } = await req.json();
 
-    // Get MCP tools for real-time space data
+    // Get MCP tools for agentic tool use
     const { tools, client } = await getSpaceMCPTools();
     mcpClient = client;
 
-    const result = streamText({
-      model: openai("gpt-4.1-nano"),
-      messages,
-      tools,
-      system: `You are Galactic Grid AI, an expert space mission tracking assistant with access to real-time space data.
+    const stream = createUIMessageStream({
+      execute: async ({ writer }) => {
+        const result = streamText({
+          // Tool-capable model
+          model: openai("gpt-4.1-nano"),
+          messages: convertToModelMessages(messages),
+          tools,
+          toolChoice: "auto",
+          stopWhen: [stepCountIs(10)],
+          system: `
+You are Galactic Grid AI, a space mission tracking assistant.
+Use tools when relevant:
+- getUpcomingLaunches for launch schedules/countdowns
+- getISSPosition for real-time ISS data
+- getMissionDetails for mission info
 
-You have access to live space tracking tools:
-- getMissionDetails: Get detailed information about specific space missions
-- getISSPosition: Get real-time International Space Station position and orbital data
-- getUpcomingLaunches: Get upcoming rocket launches within a specified time period
+Respond clearly and concisely; avoid fluff. If you call tools, synthesize results for the user.`,
+          onError({ error }) {
+            console.error("Agent stream error:", error);
+          },
+        });
 
-When users ask about space topics, use these tools to provide accurate, up-to-date information:
-- For ISS questions: Use getISSPosition to get current location and orbital data
-- For mission questions: Use getMissionDetails to get comprehensive mission information
-- For launch questions: Use getUpcomingLaunches to get scheduled launches and countdowns
+        // Pipe the model's UI stream to the response
+        writer.merge(result.toUIMessageStream());
 
-Be enthusiastic about space exploration and provide detailed, engaging responses with live data!`,
-      onFinish: async () => {
-        // Clean up MCP client after response
-        if (mcpClient) {
-          await mcpClient.close();
-        }
+        // Ensure MCP client is closed after the run completes
+        (async () => {
+          for await (const _ of result.fullStream) {
+            // drain
+          }
+          if (mcpClient) await mcpClient.close();
+        })().catch(async (e) => {
+          console.error("Stream drain/cleanup error:", e);
+          if (mcpClient) {
+            try {
+              await mcpClient.close();
+            } catch {}
+          }
+        });
       },
     });
 
-    return result.toTextStreamResponse();
+    return createUIMessageStreamResponse({ stream });
   } catch (error) {
     console.error("Chat API error:", error);
 
-    // Clean up MCP client on error
     if (mcpClient) {
       try {
         await mcpClient.close();
-      } catch (cleanupError) {
-        console.error("Error cleaning up MCP client:", cleanupError);
-      }
+      } catch {}
     }
 
     return new Response(
       JSON.stringify({
         error: "Failed to process chat request",
-        details: error instanceof Error ? error.message : "Unknown error",
+        details: error instanceof Error ? error.message : String(error),
       }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      }
+      { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }
 }

@@ -1,57 +1,63 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useChat } from "@ai-sdk/react";
+import { DefaultChatTransport } from "ai";
 
 export function ChatInterface() {
-  const { messages, input, handleInputChange, handleSubmit, isLoading } =
-    useChat({
-      api: "/api/chat",
-    });
+  // Agentic/Data Stream transport to match server's createUIMessageStreamResponse
+  const { messages, sendMessage, status, error } = useChat({
+    transport: new DefaultChatTransport({ api: "/api/chat" }),
+  });
 
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [connectionError, setConnectionError] = useState<string | null>(null);
-
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [input, setInput] = useState("");
   const [isFocused, setIsFocused] = useState(false);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const isBusy = status === "submitted" || status === "streaming";
 
   useEffect(() => {
-    scrollToBottom();
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const quickQuestions = [
-    "Where is the ISS right now?",
-    "What rockets are launching soon?",
-    "Tell me about SpaceX missions",
-    "Show me upcoming NASA launches",
-  ];
+  const quickQuestions = useMemo(
+    () => [
+      "Where is the ISS right now?",
+      "What rockets are launching soon?",
+      "Tell me about SpaceX missions",
+      "Show me upcoming NASA launches",
+    ],
+    []
+  );
 
-  const sendQuickMessage = (message: string) => {
-    handleSubmit(undefined, {
-      data: { content: message },
-    });
+  const onSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = input.trim();
+    if (!trimmed) return;
+    setInput("");
+    sendMessage({ text: trimmed });
+  };
+
+  const sendQuick = (q: string) => sendMessage({ text: q });
+
+  const renderMessageText = (m: any) => {
+    // Only render text parts; ignore step/tool events to keep UI simple
+    if (Array.isArray(m.parts) && m.parts.length > 0) {
+      const texts = m.parts
+        .filter((p: any) => p?.type === "text" && typeof p.text === "string")
+        .map((p: any) => p.text)
+        .join("");
+      if (texts) return texts;
+    }
+    if (typeof (m as any).content === "string") return (m as any).content;
+    return "";
   };
 
   return (
     <div className="flex flex-col h-full bg-gray-900 text-white">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-700">
-        <div className="flex items-center space-x-3">
-          <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
-        </div>
-        <div className="flex items-center space-x-2 text-sm text-gray-400">
-          {isConnecting ? (
-            <span className="animate-pulse">
-              🔌 Connecting to MCP space data...
-            </span>
-          ) : (
-            <span className="text-green-400">🛰️ MCP space tools ready</span>
-          )}
-        </div>
+        <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse" />
+        <div className="text-sm text-green-400">🛰️ MCP space tools ready</div>
       </div>
 
       {/* Messages */}
@@ -69,75 +75,81 @@ export function ChatInterface() {
 
             {/* Quick Questions */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-w-md mx-auto">
-              {quickQuestions.map((question, index) => (
+              {quickQuestions.map((q) => (
                 <button
-                  key={index}
-                  onClick={() => sendQuickMessage(question)}
-                  disabled={isLoading}
+                  key={q}
+                  onClick={() => sendQuick(q)}
+                  disabled={isBusy}
                   className="p-3 text-sm bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {question}
+                  {q}
                 </button>
               ))}
             </div>
           </div>
         )}
 
-        {messages.map((message, index) => (
-          <div
-            key={index}
-            className={`flex ${
-              message.role === "user" ? "justify-end" : "justify-start"
-            }`}
-          >
+        {messages.map((m, idx) => {
+          const text = renderMessageText(m);
+          if (!text && m.role !== "user") return null; // hide non-text assistant step messages
+          return (
             <div
-              className={`max-w-[80%] p-4 rounded-lg ${
-                message.role === "user"
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-800 text-gray-100"
+              key={idx}
+              className={`flex ${
+                m.role === "user" ? "justify-end" : "justify-start"
               }`}
             >
-              {message.role === "assistant" && (
-                <div className="flex items-center space-x-2 mb-2">
-                  <span className="text-blue-400">🤖</span>
-                  <span className="text-sm font-medium text-blue-400">
-                    Galactic Grid AI
-                  </span>
+              <div
+                className={`max-w-[80%] p-4 rounded-lg ${
+                  m.role === "user"
+                    ? "bg-blue-600 text-white"
+                    : "bg-gray-800 text-gray-100"
+                }`}
+              >
+                {m.role === "assistant" && (
+                  <div className="flex items-center space-x-2 mb-2">
+                    <span className="text-blue-400">🤖</span>
+                    <span className="text-sm font-medium text-blue-400">
+                      Galactic Grid AI
+                    </span>
+                  </div>
+                )}
+                <div className="whitespace-pre-wrap">
+                  {m.role === "user" ? (m as any).content ?? text : text}
                 </div>
-              )}
-              <div className="whitespace-pre-wrap">{message.content}</div>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
 
-        {isLoading && (
+        {isBusy && (
           <div className="flex justify-start">
             <div className="bg-gray-800 p-4 rounded-lg">
               <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"></div>
+                <div className="w-2 h-2 rounded-full animate-bounce bg-blue-400" />
                 <div
-                  className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"
+                  className="w-2 h-2 rounded-full animate-bounce bg-blue-400"
                   style={{ animationDelay: "0.1s" }}
-                ></div>
+                />
                 <div
-                  className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"
+                  className="w-2 h-2 rounded-full animate-bounce bg-blue-400"
                   style={{ animationDelay: "0.2s" }}
-                ></div>
+                />
                 <span className="text-gray-400 text-sm ml-2">
-                  🛰️ Fetching live space data...
+                  🛰️ Fetching live space data…
                 </span>
               </div>
             </div>
           </div>
         )}
 
-        {connectionError && (
+        {error && (
           <div className="bg-red-900/50 border border-red-700 rounded-lg p-4 text-red-200">
             <div className="flex items-center space-x-2">
               <span>⚠️</span>
               <span className="font-medium">Connection Error</span>
             </div>
-            <p className="text-sm mt-1">{connectionError}</p>
+            <p className="text-sm mt-1 break-words">{String(error)}</p>
           </div>
         )}
 
@@ -146,15 +158,15 @@ export function ChatInterface() {
 
       {/* Input */}
       <div className="p-4 border-t border-gray-700">
-        <form onSubmit={handleSubmit} className="flex space-x-2">
+        <form onSubmit={onSubmit} className="flex space-x-2">
           <div className="flex-1 relative">
             <input
               value={input}
-              onChange={handleInputChange}
+              onChange={(e) => setInput(e.target.value)}
               onFocus={() => setIsFocused(true)}
               onBlur={() => setIsFocused(false)}
               placeholder="Ask about space missions, ISS location, or upcoming launches..."
-              disabled={isLoading}
+              disabled={isBusy}
               className={`w-full p-3 bg-gray-800 text-white rounded-lg border-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
                 isFocused ? "border-blue-500" : "border-gray-600"
               }`}
@@ -167,10 +179,10 @@ export function ChatInterface() {
           </div>
           <button
             type="submit"
-            disabled={!input?.trim() || isLoading}
+            disabled={!input.trim() || isBusy}
             className="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors"
           >
-            {isLoading ? "🚀" : "⬆️"}
+            {isBusy ? "🚀" : "⬆️"}
           </button>
         </form>
       </div>
