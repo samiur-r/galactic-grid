@@ -3,7 +3,7 @@ import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/
 
 export async function createSpaceMCPClient() {
   const baseUrl = process.env.NODE_ENV === 'production' 
-    ? `https://${process.env.VERCEL_URL || 'galactic-grid.vercel.app'}`
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL || 'galactic-grid.vercel.app'}`
     : 'http://localhost:3000'
     
   const mcpClient = await createMCPClient({
