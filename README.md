@@ -1,5 +1,8 @@
 # 🚀 Galactic Grid
 
+<img width="1394" height="690" alt="image" src="https://github.com/user-attachments/assets/a3c02ab1-a989-4bde-be68-89b289660c66" />
+
+
 **AI-Powered Space Mission Tracking Platform with Real-Time Data**
 
 Galactic Grid is a complete Model Context Protocol (MCP) implementation that brings live space data directly to your fingertips. This web application features an AI assistant that doesn't just chat - it provides real-time updates on space missions, International Space Station position, and rocket launches using live data streams from NASA, SpaceX, and other space agencies.
